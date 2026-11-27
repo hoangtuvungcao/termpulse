@@ -6,7 +6,7 @@ No project-wide license has been selected for TermPulse. Agree on contribution a
 
 ## Set up a development build
 
-Use the versions configured in `.github/workflows/platform-checks.yml`: Flutter 3.38.9, Rust 1.93.0 and JDK 17 for Android. The Dart SDK constraint is `^3.10.8`. Install the native toolchain for the target platform. Build Windows on Windows and macOS/iOS on macOS; an unsigned iOS compile does not produce a signed, installable App Store release.
+Use the versions configured in `.github/workflows/platform-checks.yml`: Flutter 3.38.9, the stable Rust toolchain (the actual version is printed in CI logs), and JDK 17 for Android. The Dart SDK constraint is `^3.10.8`. Install the native toolchain for the target platform. Build Windows on Windows and macOS/iOS on macOS; an unsigned iOS compile does not produce a signed, installable App Store release.
 
 On Ubuntu, install `clang`, `cmake`, `ninja-build`, `pkg-config` and `libgtk-3-dev`. Then run from the repository root:
 

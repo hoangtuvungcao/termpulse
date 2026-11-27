@@ -43,7 +43,7 @@ Verify that generated output is ignored and no ignored private file was force-ad
 
 ## State build and platform evidence accurately
 
-The platform matrix in [README.md](../README.md), [dated Android report](ANDROID_VERIFICATION_2026-11-27.md) and [historical QA notes](../QUALITY_REVIEW.md) define the evidence available. Do not describe a configured CI job as a successful run, an unsigned iOS compile as device verification, or a controlled loopback result as a real-network performance guarantee.
+The platform matrix in [README.md](../README.md), [dated Android report](ANDROID_VERIFICATION_2026-11-27.md) and [native workflow configuration](../.github/workflows/platform-checks.yml) define the evidence available. Do not describe a configured CI job as a successful run, an unsigned iOS compile as device verification, or a controlled loopback result as a real-network performance guarantee.
 
 Android debug/profile APKs used for QA are development builds signed with a debug key. Android release tasks require the maintainer's untracked upload-key configuration and publisher/privacy definitions; they never fall back to debug signing. Windows installer signing, Apple signing/notarization, App Store distribution and iOS runtime behavior have not been established by this source publication. Native Android VNC, physical USB Serial, Android 16 and runtime 16 KB still need the verification recorded in the Android report.
 

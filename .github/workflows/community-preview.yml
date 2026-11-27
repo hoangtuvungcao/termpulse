@@ -1,0 +1,54 @@
+name: Community preview
+
+on:
+  workflow_run:
+    workflows: ['Native platform checks']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful Native platform checks run ID from main
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: community-preview-${{ github.event.workflow_run.id || inputs.source_run_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.repository == 'hoangtuvungcao/termpulse' &&
+      (
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_run' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.head_repository.full_name == github.repository &&
+         github.event.workflow_run.head_branch == 'main' &&
+         (github.event.workflow_run.event == 'push' ||
+          github.event.workflow_run.event == 'workflow_dispatch'))
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: ${{ github.event.workflow_run.id || inputs.source_run_id }}
+    steps:
+      # Checkout only this publishing workflow's trusted revision, never the source run ref.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Check publisher safety with offline fixtures
+        run: python3 .github/scripts/publish-preview_test.py -v
+      - name: Verify source and publish inspected native artifacts
+        shell: bash
+        run: >-
+          python3 .github/scripts/publish-preview.py
+          --source-run-id "$SOURCE_RUN_ID"
+          --repository "$GITHUB_REPOSITORY"

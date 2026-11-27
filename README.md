@@ -65,11 +65,11 @@ Khi dùng AI, prompt cùng gợi ý OS/shell được gửi đến endpoint đã
 | iOS | Có job biên dịch không ký trên macOS; chưa xác nhận runtime thiết bị, ký/phân phối App Store. Local shell và USB Serial chưa được hỗ trợ. |
 | Web | Chưa được hỗ trợ do phụ thuộc Rust native và `dart:io`. |
 
-Workflow được cấu hình không có nghĩa mọi job đã chạy thành công hoặc mọi chức năng đã được thử trên nền tảng đó. [QUALITY_REVIEW.md](QUALITY_REVIEW.md) giữ các mốc QA lịch sử; ưu tiên báo cáo có ngày mới nhất khi đánh giá trạng thái hiện tại.
+Workflow được cấu hình không có nghĩa mọi job đã chạy thành công hoặc mọi chức năng đã được thử trên nền tảng đó. Xem [báo cáo Android theo ngày](docs/ANDROID_VERIFICATION_2026-11-27.md) và kết quả workflow thực tế khi đánh giá trạng thái hiện tại.
 
 ## Môi trường phát triển
 
-CI trong `.github/workflows/platform-checks.yml` dùng Flutter **3.38.9**, Rust **1.93.0** và JDK **17** cho Android. `pubspec.yaml` yêu cầu Dart `^3.10.8`. Cài toolchain native tương ứng với hệ điều hành đích; chạy build Windows trên Windows, macOS/iOS trên macOS.
+CI trong `.github/workflows/platform-checks.yml` dùng Flutter **3.38.9**, Rust **stable** (ghi phiên bản thực tế vào log CI) và JDK **17** cho Android. `pubspec.yaml` yêu cầu Dart `^3.10.8`. Cài toolchain native tương ứng với hệ điều hành đích; chạy build Windows trên Windows, macOS/iOS trên macOS.
 
 Trên Ubuntu, CI cài các phụ thuộc sau cho desktop:
 
@@ -161,7 +161,7 @@ Nhóm này kiểm tra framebuffer, Unicode/input, VNC clipboard Latin-1, TLS/NLA
 - `rust_builder/`: tích hợp build Rust; `rust/vendor/`: các bản vá dependency cục bộ, được khai báo trong `rust/Cargo.toml`.
 - Bản vá dependency có ghi chú trong `rust/vendor/sspi/`, `picky/`, `ironrdp-connector/`, `ironrdp-acceptor/` và `vnc-rs/`; các bản vendor giữ giấy phép upstream. Các tệp `TERMPULSE-PATCH.md` của IronRDP/VNC mô tả thay đổi tương thích SSPI và mã hóa clipboard.
 - `test/`, `integration_test/`: test Dart/widget và các bài tích hợp native.
-- `QUALITY_REVIEW.md`: ghi nhận kết quả kiểm tra và các hạng mục còn cần xác minh.
+- `docs/ANDROID_VERIFICATION_2026-11-27.md`: kết quả Android theo ngày và giới hạn kiểm chứng; workflow CI ghi kết quả cho từng commit.
 
 ## Cộng đồng và phát hành mã nguồn
 
