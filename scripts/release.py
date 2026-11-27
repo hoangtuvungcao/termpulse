@@ -187,8 +187,9 @@ def build_android(root: Path) -> None:
         raise ReleaseError("Signed Android release requires android/key.properties; no debug fallback exists.")
     defines = [f"--dart-define={key}={value}" for key, value in values.items()]
     common = ["--release", "--no-pub", "--target-platform", "android-arm,android-arm64,android-x64", *defines]
-    run(["flutter", "build", "apk", "--split-per-abi", *common], cwd=root)
-    run(["flutter", "build", "appbundle", *common], cwd=root)
+    retry_helper = str(Path(__file__).with_name("release_android_retry.py"))
+    run([sys.executable, retry_helper, "--", "flutter", "build", "apk", "--split-per-abi", *common], cwd=root)
+    run([sys.executable, retry_helper, "--", "flutter", "build", "appbundle", *common], cwd=root)
 
 
 def metadata(root: Path, target: str) -> dict:
