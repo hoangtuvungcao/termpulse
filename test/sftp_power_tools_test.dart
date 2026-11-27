@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -325,8 +327,9 @@ void main() {
     'Batch download skips unsafe names, folders and existing targets',
     (tester) async {
       const destination = '/safe/downloads';
+      final localPrefix = '$destination${Platform.pathSeparator}';
       final localPaths = _LocalPathAccess()
-        ..entries.addAll(['$destination/exists.txt', '$destination/link.txt']);
+        ..entries.addAll(['${localPrefix}exists.txt', '${localPrefix}link.txt']);
       final backend = _Backend();
       await _mount(tester, backend, [
         _entry('good.txt'),
@@ -355,7 +358,7 @@ void main() {
         (
           session: 'session',
           remote: '/work/good.txt',
-          local: '$destination/good.txt',
+          local: '${localPrefix}good.txt',
         ),
       ]);
       expect(find.textContaining('Đã gửi 1 yêu cầu tải file.'), findsOneWidget);

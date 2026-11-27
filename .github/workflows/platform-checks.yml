@@ -151,7 +151,7 @@ jobs:
           rustup toolchain install stable --profile minimal
           rustup default stable
           rustup target add --toolchain stable aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.0.12077973'
+          "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.0.12077973'
           rustup run stable rustc --version
           flutter --version
       - run: flutter pub get

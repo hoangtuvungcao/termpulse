@@ -14,6 +14,12 @@ import 'package:xterm/xterm.dart';
 
 final backendProvider = Provider<CoreBackend>((ref) => RustCoreBackend());
 
+// Windows can return the same wall-clock timestamp for rapid opens. The process
+// sequence keeps host and session identities distinct even if the clock repeats.
+int _localIdSequence = 0;
+String _newLocalId(String prefix) =>
+    '${prefix}_${DateTime.now().microsecondsSinceEpoch}_${_localIdSequence++}';
+
 // --- Vault State ---
 class VaultUiState {
   final bool initialized;
@@ -231,7 +237,7 @@ class InventoryController extends Notifier<InventoryState> {
 
   Future<void> cloneHost(HostDto h) async {
     final copy = HostDto(
-      id: 'host_${DateTime.now().microsecondsSinceEpoch}',
+      id: _newLocalId('host'),
       groupId: h.groupId,
       label: '${h.label} (Copy)',
       protocol: h.protocol,
@@ -812,7 +818,7 @@ class SessionManagerController extends Notifier<WorkspaceState> {
 
   Future<void> openHostSession(HostDto host) async {
     if (host.protocol == 'rdp' || host.protocol == 'vnc') {
-      final localKey = 'desktop_${DateTime.now().microsecondsSinceEpoch}';
+      final localKey = _newLocalId('desktop');
       late final RemoteDesktopSession desktop;
       desktop = RemoteDesktopSession(
         host: host,
@@ -908,7 +914,7 @@ class SessionManagerController extends Notifier<WorkspaceState> {
       _recordError('Giao thức ${host.protocol} chưa được hỗ trợ.');
       return;
     }
-    final localKey = 'tab_${DateTime.now().microsecondsSinceEpoch}';
+    final localKey = _newLocalId('tab');
     final term = Terminal(maxLines: 8000);
     final ctrl = TerminalController();
     final follow = host.followTerminalSftp ?? true;
@@ -935,7 +941,7 @@ class SessionManagerController extends Notifier<WorkspaceState> {
     String? password,
     String? privateKeyPem,
   }) async {
-    final localKey = 'tab_${DateTime.now().microsecondsSinceEpoch}';
+    final localKey = _newLocalId('tab');
     final term = Terminal(maxLines: 8000);
     final ctrl = TerminalController();
     final tab = TerminalSessionTab(
@@ -964,7 +970,7 @@ class SessionManagerController extends Notifier<WorkspaceState> {
     String envTag = 'dev',
     String? hostId,
   }) async {
-    final localKey = 'tab_${DateTime.now().microsecondsSinceEpoch}';
+    final localKey = _newLocalId('tab');
     final term = Terminal(maxLines: 8000);
     final ctrl = TerminalController();
     final tab = TerminalSessionTab(
@@ -995,7 +1001,7 @@ class SessionManagerController extends Notifier<WorkspaceState> {
     String envTag = 'dev',
     String? hostId,
   }) async {
-    final localKey = 'tab_${DateTime.now().microsecondsSinceEpoch}';
+    final localKey = _newLocalId('tab');
     final term = Terminal(maxLines: 8000);
     final ctrl = TerminalController();
     final tab = TerminalSessionTab(
@@ -1028,7 +1034,7 @@ class SessionManagerController extends Notifier<WorkspaceState> {
     }
     final terminal = Terminal(maxLines: 8000);
     final tab = TerminalSessionTab(
-      localKey: 'tab_${DateTime.now().microsecondsSinceEpoch}',
+      localKey: _newLocalId('tab'),
       hostId: hostId,
       title: label ?? 'Serial ${config.portName} · ${config.baudRate} baud',
       envTag: envTag,
