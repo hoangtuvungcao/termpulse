@@ -20,6 +20,8 @@ A new Flutter FFI plugin project.
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'
   s.dependency 'FlutterMacOS'
+  # Required by the Rust HTTP client's native Apple proxy integration.
+  s.frameworks = 'SystemConfiguration'
 
   s.platform = :osx, '10.11'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
