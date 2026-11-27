@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and discussions
+    url: https://github.com/hoangtuvungcao/termpulse/discussions
+    about: Ask usage or design questions with synthetic, redacted examples.
+  - name: Report a security vulnerability privately
+    url: https://github.com/hoangtuvungcao/termpulse/security/advisories/new
+    about: Do not publish vulnerabilities, credentials or private connection data in an issue.

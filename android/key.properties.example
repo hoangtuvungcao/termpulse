@@ -1,0 +1,7 @@
+# Copy this file to android/key.properties and fill in your upload-keystore details.
+# Never commit key.properties, keystores, or passwords to source control.
+# Prefer an absolute storeFile path. Relative paths are resolved from android/app.
+storeFile=
+storePassword=
+keyAlias=
+keyPassword=

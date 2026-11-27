@@ -1,0 +1,28 @@
+title: "[Show and tell]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share a workflow or experiment with synthetic hosts and data. Inspect every image and attachment for credentials, host/IP addresses, personal paths, device identifiers, terminal history, and private remote-desktop content.
+        Sharing a result does not establish official platform support or a release guarantee.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What did you build or try?
+      description: Describe the workflow, app version/commit, platform, and relevant constraints.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: What was verified?
+      description: Distinguish a compile, mock, controlled fixture, emulator, physical-device check, and external-service test. Note what is still unverified.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Attachment review
+      options:
+        - label: I inspected this post and all attachments and removed private and sensitive data.
+          required: true

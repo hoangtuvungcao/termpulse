@@ -1,0 +1,34 @@
+name: Feature request
+description: Describe a concrete problem and a focused improvement.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use Discussions for an open-ended design question. Keep examples synthetic and do not include private host details, credentials, Vault exports, logs, or desktop captures.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the task, affected platform/protocol, and what prevents you from completing it today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Explain the smallest useful change and any expected privacy or permission implications.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and testing
+      description: Describe existing workarounds and how the result could be verified using synthetic fixtures or approved hardware.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues/discussions and removed private or sensitive information from this request.
+          required: true

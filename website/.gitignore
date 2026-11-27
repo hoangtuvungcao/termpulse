@@ -1,0 +1,10 @@
+/dist/
+/node_modules/
+# Older QA screenshots can reveal local usernames and directory metadata.
+# Only the independently reviewed public list below belongs in this site repo.
+/assets/*
+!/assets/termpulse-icon-96.png
+!/assets/pc_03_workspace_ssh_sftp.png
+!/assets/mobile_03_ssh_terminal.png
+!/assets/mobile_04_bottom_sheet_sftp.png
+!/assets/android_rdp_touchpad.png

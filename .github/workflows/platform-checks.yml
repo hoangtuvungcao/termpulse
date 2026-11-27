@@ -1,0 +1,166 @@
+name: Native platform checks
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['**']
+    paths-ignore:
+      - 'website/**'
+      - 'docs/**'
+      - '**/*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/DISCUSSION_TEMPLATE/**'
+  pull_request:
+    paths-ignore:
+      - 'website/**'
+      - 'docs/**'
+      - '**/*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/DISCUSSION_TEMPLATE/**'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_BUILD_JOBS: 2
+  CARGO_TERM_COLOR: always
+  FLUTTER_VERSION: 3.38.9
+
+jobs:
+  quality:
+    name: Analyze and test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Install native dependencies and Rust
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup run stable rustc --version
+          flutter --version
+      - run: flutter pub get
+      - run: flutter analyze --no-pub
+      - run: flutter test --no-pub
+      - run: cargo +stable test --workspace --locked
+        working-directory: rust
+      - run: cargo +stable check --workspace --all-targets --locked
+        working-directory: rust
+      - name: Verify release helpers
+        run: python3 -m unittest discover -s scripts -p 'release_test.py' -v
+
+  desktop:
+    name: ${{ matrix.asset }}
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux
+            asset: linux-x64
+          - os: windows-2022
+            platform: windows
+            asset: windows-x64
+          - os: macos-15
+            platform: macos
+            asset: macos-arm64
+          - os: macos-15-intel
+            platform: macos
+            asset: macos-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.12'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Install Linux native dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+      - name: Use the same stable Rust toolchain as Cargokit
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup run stable rustc --version
+          flutter --version
+      - run: flutter pub get
+      - name: Test on the target operating system
+        run: |
+          flutter test --no-pub
+          cargo +stable test --manifest-path rust/Cargo.toml --workspace --locked
+      - name: Build the native desktop application
+        run: flutter build ${{ matrix.platform }} --release --no-pub
+      - name: Package the complete native bundle
+        run: python scripts/release.py package ${{ matrix.asset }}
+      - name: Build unsigned iOS device application
+        if: matrix.asset == 'macos-arm64'
+        run: |
+          rustup target add --toolchain stable aarch64-apple-ios
+          flutter build ios --release --no-codesign --no-pub
+          python scripts/release.py package ios-unsigned-dev-only-arm64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-${{ matrix.asset }}
+          path: dist/termpulse-*
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  android-preview:
+    name: Android debug preview (not a store release)
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    needs: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Install Android SDK and Rust targets
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add --toolchain stable aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.0.12077973'
+          rustup run stable rustc --version
+          flutter --version
+      - run: flutter pub get
+      - name: Build all three Android debug ABIs
+        run: flutter build apk --debug --split-per-abi --target-platform android-arm,android-arm64,android-x64 --no-pub
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-debug-preview-not-for-store
+          path: build/app/outputs/flutter-apk/app-*-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

@@ -1,0 +1,26 @@
+title: "[Question]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check README.md for current platform and feature limits. Use Issues for a reproducible defect and SECURITY.md for a private vulnerability report.
+        Do not share real hosts, credentials, tokens, Vault data, device identifiers, unredacted logs, or private desktop captures.
+  - type: input
+    id: environment
+    attributes:
+      label: Version and platform
+      description: App version/commit, build mode, and OS version. Omit device identifiers and personal paths.
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do?
+      description: Explain the goal with a synthetic example and a focused question.
+    validations:
+      required: true
+  - type: textarea
+    id: attempts
+    attributes:
+      label: What have you checked?
+      description: Mention relevant documentation and checks already tried. Redact any short error excerpt before posting.

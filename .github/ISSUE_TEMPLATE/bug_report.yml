@@ -1,0 +1,64 @@
+name: Bug report
+description: Report a reproducible TermPulse defect using synthetic data.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a security vulnerability, use the private reporting link in SECURITY.md.
+        Do not attach real hosts, passwords, keys, tokens, Vault databases/exports, device identifiers, or private terminal/desktop captures. Inspect and redact any logs first.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Include the app version or commit and debug, profile, or release build mode.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - Linux
+        - Windows
+        - macOS
+        - iOS
+        - Multiple platforms
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS version, CPU architecture, and relevant toolchain versions. Omit serial numbers and other device identifiers.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Give a minimal reproduction with a disposable local fixture. Identify the affected protocol or screen without sharing a real server address.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+      description: Explain what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence and checks
+      description: Include a short redacted error or test command, checks already tried, and whether this is a compile, mock, fixture, emulator, physical-device, or external-service result.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and checked the documented platform limits.
+          required: true
+        - label: I inspected all text and attachments and removed secrets, private hosts, user data, device identifiers, and personal paths.
+          required: true
