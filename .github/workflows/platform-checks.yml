@@ -106,10 +106,10 @@ jobs:
           rustup run stable rustc --version
           flutter --version
       - run: flutter pub get
-      - name: Test on the target operating system
-        run: |
-          flutter test --no-pub
-          cargo +stable test --manifest-path rust/Cargo.toml --workspace --locked
+      - name: Test Flutter on the target operating system
+        run: flutter test --no-pub
+      - name: Test Rust on the target operating system
+        run: cargo +stable test --manifest-path rust/Cargo.toml --workspace --locked -- --nocapture
       - name: Build the native desktop application
         run: flutter build ${{ matrix.platform }} --release --no-pub
       - name: Package the complete native bundle

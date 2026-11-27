@@ -3066,14 +3066,16 @@ mod tests {
             let (mut stream, _) = listener.accept().await.unwrap();
             stream.write_all(b"This is not an SSH server\r\n").await.unwrap();
         });
-        let handshake = tokio::time::timeout(Duration::from_secs(2),
+        let handshake = tokio::time::timeout(Duration::from_secs(20),
             connect_ssh_client(&effective, None, &known_hosts),
-        ).await.unwrap().err().unwrap();
+        ).await.expect("Invalid SSH banner did not close the handshake").err().unwrap();
         assert!(matches!(handshake, TransportError::SshHandshake(_)), "{handshake}");
         peer.await.unwrap();
-        let network = tokio::time::timeout(Duration::from_secs(2),
+        // Give the OS's refused-connect path time to complete, above the
+        // production 15-second deadline. This checks category, not TCP latency.
+        let network = tokio::time::timeout(Duration::from_secs(20),
             connect_ssh_client(&effective, None, &known_hosts),
-        ).await.unwrap().err().unwrap();
+        ).await.expect("Refused loopback connection did not complete").err().unwrap();
         assert!(matches!(network, TransportError::SshConnection(_)), "{network}");
     }
 
@@ -3379,7 +3381,15 @@ mod tests {
 
     #[tokio::test]
     async fn end_to_end_ssh_shell_sftp_proc_and_tunnel_lifecycle() {
+        tokio::time::timeout(
+            Duration::from_secs(60),
+            ssh_shell_sftp_proc_and_tunnel_lifecycle(),
+        ).await.expect("SSH lifecycle fixture exceeded 60 seconds; inspect its last phase");
+    }
+
+    async fn ssh_shell_sftp_proc_and_tunnel_lifecycle() {
         let _trust_test = host_keys::TEST_LOCK.lock().await;
+        eprintln!("SSH lifecycle: known-host validation");
         let tmp_dir = tempfile::tempdir().unwrap();
         std::fs::write(tmp_dir.path().join("hello.txt"), b"initial_data").unwrap();
         let ssh_port = spawn_test_ssh_server(tmp_dir.path().to_path_buf(), &tmp_dir.path().join("known_hosts")).await;
@@ -3442,6 +3452,7 @@ mod tests {
 
         // Both authenticated proxy protocols carry a real SSH shell, with
         // proxy credentials separate from the destination SSH credentials.
+        eprintln!("SSH lifecycle: authenticated proxies");
         for kind in [ProxyKind::HttpConnect, ProxyKind::Socks5] {
             let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
             let proxy_port = listener.local_addr().unwrap().port();
@@ -3498,6 +3509,7 @@ mod tests {
         }
 
         // 1. Shell + OSC-7 CWD tracking
+        eprintln!("SSH lifecycle: shell and environment");
         let (tx, mut rx) = spawn_ssh_shell(&ssh, 80, 24, None).await.unwrap();
         let first = rx.recv().await.unwrap();
         assert!(matches!(first, SessionOutput::Data(b) if String::from_utf8_lossy(&b).contains("WELCOME_TERMPULSE")));
@@ -3533,6 +3545,7 @@ mod tests {
         assert!(spawn_ssh_shell_with_env(&ssh, 80, 24, None, &invalid).await.is_err());
 
         // 2. SFTP list, read, write
+        eprintln!("SSH lifecycle: SFTP");
         let sftp = open_sftp_session(&ssh).await.unwrap();
         let (_cwd, list) = sftp_list_dir(&sftp, ".").await.unwrap();
         assert!(list.iter().any(|e| e.name == "hello.txt"));
@@ -3545,6 +3558,7 @@ mod tests {
         );
 
         // 3. Agentless /proc monitor
+        eprintln!("SSH lifecycle: process metrics");
         let raw_proc = exec_ssh_command(&ssh, PROC_PROBE_SCRIPT, Duration::from_secs(5))
             .await
             .unwrap();
@@ -3554,6 +3568,7 @@ mod tests {
         assert_eq!(metrics.uptime_secs, 3600);
 
         // 4. Independent Local Tunnel (-L)
+        eprintln!("SSH lifecycle: local tunnel");
         let echo_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let echo_port = echo_listener.local_addr().unwrap().port();
         let echo_task = tokio::spawn(async move {
@@ -3603,6 +3618,7 @@ mod tests {
         drop(rebound);
 
         // Dynamic SOCKS refuses unsupported auth and closes live streams on stop.
+        eprintln!("SSH lifecycle: dynamic SOCKS tunnel");
         let mut dynamic = start_ssh_tunnel(TunnelRule {
             id: "dynamic".into(), name: "SOCKS".into(), host_id: "h1".into(),
             kind: TunnelKind::DynamicSocks, bind_addr: "127.0.0.1".into(), bind_port: 0,
@@ -3631,6 +3647,7 @@ mod tests {
         assert_eq!(tokio::time::timeout(Duration::from_secs(2), socks.read(&mut closed)).await.unwrap().unwrap(), 0);
 
         // Remote stop sends cancel-tcpip-forward, removes routing, and closes clients.
+        eprintln!("SSH lifecycle: remote tunnel");
         let mut remote = start_ssh_tunnel(TunnelRule {
             id: "remote".into(), name: "Remote".into(), host_id: "h1".into(),
             kind: TunnelKind::Remote, bind_addr: "127.0.0.1".into(), bind_port: 0,
@@ -3652,9 +3669,15 @@ mod tests {
         // 5. Desktop local PTY smoke test
         #[cfg(not(target_os = "ios"))]
         {
+            eprintln!("SSH lifecycle: local PTY");
             let (pty_in, mut pty_out) = spawn_local_shell(80, 24, None).unwrap();
+            let command = if cfg!(windows) {
+                b"echo LOCAL_PTY_OK\rexit\r".as_slice()
+            } else {
+                b"echo LOCAL_PTY_OK\nexit\n".as_slice()
+            };
             pty_in
-                .send(SessionInput::Bytes(b"echo LOCAL_PTY_OK\nexit\n".to_vec()))
+                .send(SessionInput::Bytes(command.to_vec()))
                 .await
                 .unwrap();
             let mut collected = String::new();
@@ -3666,7 +3689,19 @@ mod tests {
                     break;
                 }
             }
+            // Stop while the runtime is still alive. Dropping the sender at
+            // test teardown can cancel the task before its ConPTY child kill.
+            let _ = pty_in.send(SessionInput::Close).await;
+            tokio::time::timeout(Duration::from_secs(5), async {
+                while let Some(event) = pty_out.recv().await {
+                    if matches!(event, SessionOutput::Closed(_)) {
+                        return;
+                    }
+                }
+                panic!("Local PTY output ended without a closed event");
+            }).await.expect("Local PTY did not close before runtime teardown");
             assert!(collected.contains("LOCAL_PTY_OK"));
         }
+        eprintln!("SSH lifecycle: complete");
     }
 }
