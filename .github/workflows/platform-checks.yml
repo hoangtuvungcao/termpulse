@@ -57,7 +57,7 @@ jobs:
       - run: cargo +stable check --workspace --all-targets --locked
         working-directory: rust
       - name: Verify release helpers
-        run: python3 -m unittest discover -s scripts -p 'release_test.py' -v
+        run: python3 -m unittest discover -s scripts -p 'release*_test.py' -v
 
   desktop:
     name: ${{ matrix.asset }}
