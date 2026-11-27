@@ -1,3 +1,8 @@
+import { fetchPublishedRelease } from './releases.js';
+import { communityPreviewCopy } from './i18n.js';
+
+let communityPreviewRelease = null;
+
 import { SITE_CONFIG, REPO_URL, RELEASE_API } from './site.config.js';
 import { EN, DYNAMIC } from './i18n.js';
 import { PLATFORMS, selectReleaseAssets, safeReleaseUrl, formatSize } from './releases.js';
@@ -52,7 +57,7 @@ function renderRelease() {
   const status = document.getElementById('releaseStatus');
   if (!status) return;
   const {kind,release} = releaseState;
-  const assets = selectReleaseAssets(release,SITE_CONFIG.owner,SITE_CONFIG.repository);
+  const assets = selectReleaseAssets(release,SITE_CONFIG.owner,SITE_CONFIG.repository, { allowPrerelease: updateCommunityPreviewNotice(release) });
   status.replaceChildren();
   if (kind === 'loading') status.textContent = t('releaseLoading');
   else if (kind === 'error') status.textContent = t('releaseError');
@@ -101,13 +106,13 @@ async function loadReleases() {
   releaseState = {kind:'loading',release:null};
   renderRelease();
   try {
-    const response = await fetch(RELEASE_API,{headers:{Accept:'application/vnd.github+json'},signal:controller.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+    const response = await fetchPublishedRelease(RELEASE_API,{headers:{Accept:'application/vnd.github+json'},signal:controller.signal,credentials:'omit',referrerPolicy:'no-referrer'});
     if (request !== releaseRequest) return;
     if (response.status === 404) releaseState = {kind:'ready',release:null};
     else {
       if (!response.ok) throw new Error('RELEASE_UNAVAILABLE');
       const release = await response.json();
-      if (!release || typeof release.tag_name !== 'string' || release.draft || release.prerelease || !Array.isArray(release.assets)) throw new Error('RELEASE_INVALID');
+      if (!release || typeof release.tag_name !== 'string' || release.draft || (release.prerelease && release.__termpulseCommunityPreview !== true) || !Array.isArray(release.assets)) throw new Error('RELEASE_INVALID');
       releaseState = {kind:'ready',release};
     }
   } catch {
@@ -164,3 +169,45 @@ document.getElementById('retryReleases')?.addEventListener('click',loadReleases)
 applyTheme(storage.get('tp_theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
 applyLanguage(language);
 if (document.getElementById('releaseStatus')) loadReleases();
+
+
+function updateCommunityPreviewNotice(release) {
+  const active = release?.__termpulseCommunityPreview === true && release?.prerelease === true;
+  communityPreviewRelease = active ? release : null;
+  renderCommunityPreviewNotice();
+  return active;
+}
+
+function renderCommunityPreviewNotice() {
+  const section = document.querySelector('a[data-download]')?.closest('section');
+  if (!section) return;
+  section.dataset.releaseChannel = communityPreviewRelease ? 'community-preview' : 'stable';
+  let notice = document.getElementById('community-preview-notice');
+  if (!communityPreviewRelease) {
+    if (notice) notice.hidden = true;
+    return;
+  }
+  if (!notice) {
+    notice = document.createElement('p');
+    notice.id = 'community-preview-notice';
+    notice.className = 'community-preview-notice';
+    notice.setAttribute('role', 'status');
+    const heading = section.querySelector('h2');
+    const header = heading?.parentElement;
+    if (header && header !== section && header.parentElement === section) header.insertAdjacentElement('afterend', notice);
+    else if (heading) heading.insertAdjacentElement('afterend', notice);
+    else section.prepend(notice);
+  }
+  const language = document.documentElement.lang.toLowerCase().startsWith('en') ? 'en' : 'vi';
+  const copy = communityPreviewCopy[language];
+  const link = document.createElement('a');
+  link.href = communityPreviewRelease.__termpulseCommunityPreviewUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = copy.assets;
+  notice.replaceChildren(document.createTextNode(copy.warning + ' '), link);
+  notice.hidden = false;
+}
+
+const communityPreviewLanguageObserver = new MutationObserver(renderCommunityPreviewNotice);
+communityPreviewLanguageObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
